@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Media Tracker GUI - Instagram-like interface."""
+"""Media Tracker GUI - Dark Cinematic Netflix/IMDB Style with Orange Accents."""
 
 import io
 import os
@@ -17,13 +17,40 @@ from movie_api import MovieAPI, OMDBError
 from recommender import Recommender
 
 
-# Set appearance mode to system (follows OS dark/light mode)
-ctk.set_appearance_mode("system")
-ctk.set_default_color_theme("blue")
+# Dark Cinematic Theme (Netflix/IMDB inspired)
+THEME = {
+    # Backgrounds
+    "bg_primary": "#0D0D0D",       # Main app background (near-black)
+    "bg_secondary": "#141414",      # Netflix-style dark
+    "bg_card": "#1A1A1A",           # Card backgrounds
+    "bg_card_hover": "#252525",     # Card hover state
+    "bg_sidebar": "#0A0A0A",        # Sidebar background
+
+    # Orange Accents (Netflix + IMDB inspired)
+    "accent_primary": "#E65100",    # Main orange
+    "accent_hover": "#FF8C00",      # Hover state
+    "accent_glow": "#FF6600",       # Glow effects
+
+    # Text Colors
+    "text_primary": "#FFFFFF",      # White
+    "text_secondary": "#B3B3B3",    # Gray
+    "text_muted": "#666666",        # Muted
+
+    # Rating (IMDB-style gold)
+    "rating_gold": "#F5C518",
+
+    # Status Badge Colors
+    "status_watched": "#4ADE80",    # Green (completed)
+    "status_watching": "#FB923C",   # Orange (in progress)
+    "status_planned": "#60A5FA",    # Blue (wishlist)
+}
+
+# Set appearance mode to dark only (cinematic theme)
+ctk.set_appearance_mode("dark")
 
 
 class ImageLoader:
-    """Async image loader with caching."""
+    """Async image loader with caching and gradient overlay support."""
 
     _cache: dict = {}
 
@@ -32,15 +59,17 @@ class ImageLoader:
         cls,
         url: str,
         callback: Callable[[Optional[ctk.CTkImage]], None],
-        size: tuple = (150, 220),
+        size: tuple = (180, 270),
+        add_gradient: bool = False,
     ):
         """Load image asynchronously and call callback with result."""
         if not url or url == "N/A":
             callback(None)
             return
 
-        if url in cls._cache:
-            callback(cls._cache[url])
+        cache_key = f"{url}_{size}_{add_gradient}"
+        if cache_key in cls._cache:
+            callback(cls._cache[cache_key])
             return
 
         def _load():
@@ -49,19 +78,45 @@ class ImageLoader:
                     image_data = response.read()
                 pil_image = Image.open(io.BytesIO(image_data))
                 pil_image = pil_image.resize(size, Image.Resampling.LANCZOS)
+
+                # Add gradient overlay for cinematic effect
+                if add_gradient:
+                    pil_image = cls._add_gradient_overlay(pil_image)
+
                 ctk_image = ctk.CTkImage(
                     light_image=pil_image, dark_image=pil_image, size=size
                 )
-                cls._cache[url] = ctk_image
+                cls._cache[cache_key] = ctk_image
                 callback(ctk_image)
             except Exception:
                 callback(None)
 
         threading.Thread(target=_load, daemon=True).start()
 
+    @classmethod
+    def _add_gradient_overlay(cls, image: Image.Image) -> Image.Image:
+        """Add a bottom gradient overlay for text readability."""
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+
+        width, height = image.size
+        gradient = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(gradient)
+
+        # Create gradient in bottom third
+        gradient_height = height // 3
+        for y in range(gradient_height):
+            alpha = int(180 * (y / gradient_height))
+            draw.line(
+                [(0, height - gradient_height + y), (width, height - gradient_height + y)],
+                fill=(0, 0, 0, alpha),
+            )
+
+        return Image.alpha_composite(image, gradient)
+
 
 class MediaCard(ctk.CTkFrame):
-    """Instagram-style card for displaying media items."""
+    """Dark cinematic card for displaying media items with hover effects."""
 
     def __init__(
         self,
@@ -77,51 +132,56 @@ class MediaCard(ctk.CTkFrame):
         super().__init__(parent, **kwargs)
 
         self.on_click = on_click
-        self.configure(corner_radius=15, fg_color=("gray90", "gray17"))
+        self.configure(
+            corner_radius=12,
+            fg_color=THEME["bg_card"],
+            border_width=0,
+        )
 
-        # Image placeholder
+        # Image placeholder (larger 180x270 for cinematic ratio)
         self.image_label = ctk.CTkLabel(
             self,
-            text="📷",
-            width=150,
-            height=220,
-            corner_radius=10,
-            fg_color=("gray80", "gray25"),
+            text="🎬",
+            width=180,
+            height=270,
+            corner_radius=8,
+            fg_color=THEME["bg_secondary"],
         )
-        self.image_label.pack(padx=10, pady=(10, 5))
+        self.image_label.pack(padx=8, pady=(8, 5))
 
-        # Load image async
+        # Load image async with gradient overlay
         if image_url:
-            ImageLoader.load_async(image_url, self._set_image)
+            ImageLoader.load_async(image_url, self._set_image, size=(180, 270), add_gradient=True)
 
         # Title
         self.title_label = ctk.CTkLabel(
             self,
             text=title[:25] + "..." if len(title) > 25 else title,
             font=ctk.CTkFont(size=14, weight="bold"),
-            wraplength=150,
+            text_color=THEME["text_primary"],
+            wraplength=170,
         )
-        self.title_label.pack(padx=10, pady=(5, 0))
+        self.title_label.pack(padx=8, pady=(5, 0))
 
         # Subtitle (year/author)
         self.subtitle_label = ctk.CTkLabel(
             self,
             text=subtitle,
             font=ctk.CTkFont(size=12),
-            text_color=("gray40", "gray60"),
+            text_color=THEME["text_secondary"],
         )
-        self.subtitle_label.pack(padx=10)
+        self.subtitle_label.pack(padx=8)
 
-        # Status badge
+        # Status badge with themed colors
         status_colors = {
-            "watched": ("#22c55e", "#16a34a"),
-            "watching": ("#3b82f6", "#2563eb"),
-            "want_to_watch": ("#f59e0b", "#d97706"),
-            "read": ("#22c55e", "#16a34a"),
-            "reading": ("#3b82f6", "#2563eb"),
-            "want_to_read": ("#f59e0b", "#d97706"),
+            "watched": THEME["status_watched"],
+            "watching": THEME["status_watching"],
+            "want_to_watch": THEME["status_planned"],
+            "read": THEME["status_watched"],
+            "reading": THEME["status_watching"],
+            "want_to_read": THEME["status_planned"],
         }
-        color = status_colors.get(status, ("#6b7280", "#4b5563"))
+        color = status_colors.get(status, THEME["text_muted"])
 
         self.status_badge = ctk.CTkLabel(
             self,
@@ -129,35 +189,62 @@ class MediaCard(ctk.CTkFrame):
             font=ctk.CTkFont(size=11),
             fg_color=color,
             corner_radius=8,
-            text_color="white",
+            text_color=THEME["bg_primary"],
             padx=8,
             pady=2,
         )
         self.status_badge.pack(pady=(5, 0))
 
-        # Rating
+        # IMDB-style gold rating badge
         if rating:
+            rating_frame = ctk.CTkFrame(self, fg_color="transparent")
+            rating_frame.pack(pady=(5, 10))
+
             self.rating_label = ctk.CTkLabel(
-                self,
-                text=f"★ {rating}/10",
-                font=ctk.CTkFont(size=12),
-                text_color=("#f59e0b", "#fbbf24"),
+                rating_frame,
+                text=f"★ {rating}",
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color=THEME["rating_gold"],
             )
-            self.rating_label.pack(pady=(5, 10))
+            self.rating_label.pack(side="left")
+
+            ctk.CTkLabel(
+                rating_frame,
+                text="/10",
+                font=ctk.CTkFont(size=11),
+                text_color=THEME["text_muted"],
+            ).pack(side="left")
         else:
             self.rating_label = ctk.CTkLabel(self, text="", height=10)
             self.rating_label.pack(pady=(0, 10))
 
-        # Bind click to all widgets
+        # Bind click and hover to all widgets
         if on_click:
-            self._bind_click_recursive(self)
+            self._bind_events_recursive(self)
 
-    def _bind_click_recursive(self, widget):
-        """Bind click event to widget and all its children."""
+    def _bind_events_recursive(self, widget):
+        """Bind click and hover events to widget and all its children."""
         widget.bind("<Button-1>", self._handle_click)
+        widget.bind("<Enter>", self._on_hover_enter)
+        widget.bind("<Leave>", self._on_hover_leave)
         widget.configure(cursor="hand2")
         for child in widget.winfo_children():
-            self._bind_click_recursive(child)
+            self._bind_events_recursive(child)
+
+    def _on_hover_enter(self, event):
+        """Handle hover enter - orange glow effect."""
+        self.configure(
+            fg_color=THEME["bg_card_hover"],
+            border_width=2,
+            border_color=THEME["accent_glow"],
+        )
+
+    def _on_hover_leave(self, event):
+        """Handle hover leave - remove glow."""
+        self.configure(
+            fg_color=THEME["bg_card"],
+            border_width=0,
+        )
 
     def _handle_click(self, event):
         """Handle click event."""
@@ -171,7 +258,7 @@ class MediaCard(ctk.CTkFrame):
 
 
 class SearchResultCard(ctk.CTkFrame):
-    """Card for search results."""
+    """Dark themed card for search results."""
 
     def __init__(
         self,
@@ -183,7 +270,7 @@ class SearchResultCard(ctk.CTkFrame):
     ):
         super().__init__(parent, **kwargs)
 
-        self.configure(corner_radius=12, fg_color=("gray90", "gray17"))
+        self.configure(corner_radius=12, fg_color=THEME["bg_card"])
 
         # Content frame using grid for better layout
         content = ctk.CTkFrame(self, fg_color="transparent")
@@ -198,6 +285,7 @@ class SearchResultCard(ctk.CTkFrame):
             text_frame,
             text=title[:45] + "..." if len(title) > 45 else title,
             font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=THEME["text_primary"],
             anchor="w",
         ).pack(anchor="w")
 
@@ -205,11 +293,11 @@ class SearchResultCard(ctk.CTkFrame):
             text_frame,
             text=subtitle[:40] + "..." if len(subtitle) > 40 else subtitle,
             font=ctk.CTkFont(size=12),
-            text_color=("gray40", "gray60"),
+            text_color=THEME["text_secondary"],
             anchor="w",
         ).pack(anchor="w")
 
-        # Add button - always visible on the right
+        # Orange Add button
         self.add_btn = ctk.CTkButton(
             content,
             text="+ Add",
@@ -217,38 +305,44 @@ class SearchResultCard(ctk.CTkFrame):
             height=35,
             corner_radius=8,
             font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+            text_color=THEME["text_primary"],
             command=on_add,
         )
         self.add_btn.grid(row=0, column=1, padx=(15, 0), sticky="e")
 
 
 class Sidebar(ctk.CTkFrame):
-    """Instagram-style sidebar navigation."""
+    """Dark cinematic sidebar navigation with orange accents."""
 
     def __init__(self, parent, on_navigate: Callable, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.configure(width=220, corner_radius=0, fg_color=("gray95", "gray10"))
+        self.configure(width=220, corner_radius=0, fg_color=THEME["bg_sidebar"])
         self.pack_propagate(False)
 
         self.on_navigate = on_navigate
         self.buttons = {}
+        self.accent_bars = {}
         self.active = None
 
-        # Logo/Title
+        # Logo/Title with orange accent
         logo_frame = ctk.CTkFrame(self, fg_color="transparent")
         logo_frame.pack(fill="x", padx=20, pady=(25, 30))
 
         ctk.CTkLabel(
             logo_frame,
-            text="📽️ Media",
-            font=ctk.CTkFont(size=24, weight="bold"),
+            text="MEDIA",
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=THEME["accent_primary"],
         ).pack(anchor="w")
 
         ctk.CTkLabel(
             logo_frame,
-            text="Tracker",
-            font=ctk.CTkFont(size=24, weight="bold"),
+            text="TRACKER",
+            font=ctk.CTkFont(size=26, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w")
 
         # Navigation items
@@ -262,41 +356,37 @@ class Sidebar(ctk.CTkFrame):
         for key, icon, label in nav_items:
             self._create_nav_button(key, icon, label)
 
-        # Spacer
-        ctk.CTkFrame(self, fg_color="transparent", height=20).pack(fill="x")
-
-        # Theme toggle at bottom
-        theme_frame = ctk.CTkFrame(self, fg_color="transparent")
-        theme_frame.pack(side="bottom", fill="x", padx=20, pady=20)
-
-        self.theme_switch = ctk.CTkSwitch(
-            theme_frame,
-            text="Dark Mode",
-            command=self._toggle_theme,
-            onvalue="dark",
-            offvalue="light",
-        )
-        self.theme_switch.pack(anchor="w")
-
-        # Set initial state based on system
-        if ctk.get_appearance_mode() == "Dark":
-            self.theme_switch.select()
-
     def _create_nav_button(self, key: str, icon: str, label: str):
-        """Create a navigation button."""
+        """Create a navigation button with orange accent bar."""
+        # Container for accent bar + button
+        container = ctk.CTkFrame(self, fg_color="transparent", height=45)
+        container.pack(fill="x", pady=3)
+        container.pack_propagate(False)
+
+        # Orange accent bar on left (hidden by default)
+        accent_bar = ctk.CTkFrame(
+            container,
+            width=4,
+            height=35,
+            corner_radius=2,
+            fg_color="transparent",
+        )
+        accent_bar.place(x=0, rely=0.5, anchor="w")
+        self.accent_bars[key] = accent_bar
+
         btn = ctk.CTkButton(
-            self,
+            container,
             text=f"  {icon}  {label}",
             font=ctk.CTkFont(size=15),
             anchor="w",
             height=45,
             corner_radius=10,
             fg_color="transparent",
-            text_color=("gray20", "gray80"),
-            hover_color=("gray85", "gray20"),
+            text_color=THEME["text_secondary"],
+            hover_color=THEME["bg_card"],
             command=lambda: self._on_click(key),
         )
-        btn.pack(fill="x", padx=15, pady=3)
+        btn.pack(fill="x", padx=(15, 15), side="left", expand=True)
         self.buttons[key] = btn
 
     def _on_click(self, key: str):
@@ -305,22 +395,19 @@ class Sidebar(ctk.CTkFrame):
         for k, btn in self.buttons.items():
             if k == key:
                 btn.configure(
-                    fg_color=("gray80", "gray25"),
-                    text_color=("gray10", "white"),
+                    fg_color=THEME["bg_card"],
+                    text_color=THEME["text_primary"],
                 )
+                self.accent_bars[k].configure(fg_color=THEME["accent_primary"])
             else:
                 btn.configure(
                     fg_color="transparent",
-                    text_color=("gray20", "gray80"),
+                    text_color=THEME["text_secondary"],
                 )
+                self.accent_bars[k].configure(fg_color="transparent")
 
         self.active = key
         self.on_navigate(key)
-
-    def _toggle_theme(self):
-        """Toggle between dark and light mode."""
-        mode = self.theme_switch.get()
-        ctk.set_appearance_mode(mode)
 
     def set_active(self, key: str):
         """Set active navigation item."""
@@ -328,7 +415,7 @@ class Sidebar(ctk.CTkFrame):
 
 
 class AddMediaDialog(ctk.CTkToplevel):
-    """Dialog for adding media with status selection."""
+    """Dark cinematic dialog for adding media with status selection."""
 
     def __init__(self, parent, media_type: str, title: str, on_confirm: Callable):
         super().__init__(parent)
@@ -340,6 +427,7 @@ class AddMediaDialog(ctk.CTkToplevel):
         self.title(f"Add {media_type.title()}")
         self.geometry("420x400")
         self.resizable(False, False)
+        self.configure(fg_color=THEME["bg_secondary"])
 
         # Center on parent and focus
         self.transient(parent)
@@ -358,17 +446,23 @@ class AddMediaDialog(ctk.CTkToplevel):
             self,
             text="Add to your library",
             font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(pady=(20, 5))
 
         ctk.CTkLabel(
             self,
             text=title[:45] + "..." if len(title) > 45 else title,
             font=ctk.CTkFont(size=14),
-            text_color=("gray40", "gray60"),
+            text_color=THEME["text_secondary"],
         ).pack(pady=(0, 15))
 
         # Status selection
-        ctk.CTkLabel(self, text="Status:", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=40)
+        ctk.CTkLabel(
+            self,
+            text="Status:",
+            font=ctk.CTkFont(size=14),
+            text_color=THEME["text_primary"],
+        ).pack(anchor="w", padx=40)
 
         if media_type == "movie":
             statuses = ["Want to Watch", "Watching", "Watched"]
@@ -383,29 +477,56 @@ class AddMediaDialog(ctk.CTkToplevel):
             width=340,
             height=38,
             corner_radius=8,
+            fg_color=THEME["bg_card"],
+            button_color=THEME["accent_primary"],
+            button_hover_color=THEME["accent_hover"],
+            dropdown_fg_color=THEME["bg_card"],
+            dropdown_hover_color=THEME["bg_card_hover"],
         )
         self.status_menu.pack(pady=(5, 15))
 
         # Rating section
-        ctk.CTkLabel(self, text="Rating (optional):", font=ctk.CTkFont(size=14)).pack(anchor="w", padx=40)
+        ctk.CTkLabel(
+            self,
+            text="Rating (optional):",
+            font=ctk.CTkFont(size=14),
+            text_color=THEME["text_primary"],
+        ).pack(anchor="w", padx=40)
 
         rating_row = ctk.CTkFrame(self, fg_color="transparent")
         rating_row.pack(fill="x", padx=40, pady=(5, 5))
 
         self.rating_slider = ctk.CTkSlider(
-            rating_row, from_=1, to=10, number_of_steps=9, width=280
+            rating_row,
+            from_=1,
+            to=10,
+            number_of_steps=9,
+            width=280,
+            progress_color=THEME["accent_primary"],
+            button_color=THEME["accent_primary"],
+            button_hover_color=THEME["accent_hover"],
         )
         self.rating_slider.pack(side="left")
         self.rating_slider.set(5)
 
         self.rating_label = ctk.CTkLabel(
-            rating_row, text="5", font=ctk.CTkFont(size=16, weight="bold"), width=40
+            rating_row,
+            text="5",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            width=40,
+            text_color=THEME["rating_gold"],
         )
         self.rating_label.pack(side="left", padx=(10, 0))
 
         self.rating_slider.configure(command=self._update_rating_label)
 
-        self.use_rating = ctk.CTkCheckBox(self, text="Include rating")
+        self.use_rating = ctk.CTkCheckBox(
+            self,
+            text="Include rating",
+            text_color=THEME["text_secondary"],
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+        )
         self.use_rating.pack(pady=(10, 15))
 
         # Buttons - at the bottom
@@ -419,7 +540,9 @@ class AddMediaDialog(ctk.CTkToplevel):
             height=40,
             fg_color="transparent",
             border_width=2,
-            text_color=("gray20", "gray80"),
+            border_color=THEME["text_muted"],
+            text_color=THEME["text_secondary"],
+            hover_color=THEME["bg_card"],
             command=self.destroy,
         ).pack(side="left", padx=10)
 
@@ -429,6 +552,9 @@ class AddMediaDialog(ctk.CTkToplevel):
             width=150,
             height=40,
             font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+            text_color=THEME["text_primary"],
             command=self._confirm,
         ).pack(side="left", padx=10)
 
@@ -443,7 +569,7 @@ class AddMediaDialog(ctk.CTkToplevel):
 
 
 class MediaDetailDialog(ctk.CTkToplevel):
-    """Dialog showing media details with edit options."""
+    """Dark cinematic dialog showing media details with edit options."""
 
     def __init__(
         self,
@@ -461,8 +587,9 @@ class MediaDetailDialog(ctk.CTkToplevel):
         self.on_delete = on_delete
 
         self.title("Details")
-        self.geometry("500x650")
+        self.geometry("500x700")
         self.minsize(400, 500)
+        self.configure(fg_color=THEME["bg_secondary"])
 
         self.transient(parent)
         self.grab_set()
@@ -472,33 +599,40 @@ class MediaDetailDialog(ctk.CTkToplevel):
         # Center the dialog on screen
         self.update_idletasks()
         x = parent.winfo_x() + (parent.winfo_width() // 2) - 250
-        y = parent.winfo_y() + (parent.winfo_height() // 2) - 325
-        self.geometry(f"500x650+{x}+{y}")
+        y = parent.winfo_y() + (parent.winfo_height() // 2) - 350
+        self.geometry(f"500x700+{x}+{y}")
 
         # Scrollable content
-        scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        scroll = ctk.CTkScrollableFrame(
+            self,
+            fg_color="transparent",
+            scrollbar_button_color=THEME["bg_card"],
+            scrollbar_button_hover_color=THEME["bg_card_hover"],
+        )
         scroll.pack(fill="both", expand=True, padx=20, pady=20)
 
-        # Image
+        # Larger poster image (cinematic)
         self.image_label = ctk.CTkLabel(
             scroll,
             text="Loading...",
-            width=200,
-            height=300,
-            corner_radius=15,
-            fg_color=("gray80", "gray25"),
+            width=220,
+            height=330,
+            corner_radius=12,
+            fg_color=THEME["bg_card"],
+            text_color=THEME["text_muted"],
         )
         self.image_label.pack(pady=(0, 20))
 
         image_url = media.poster_url if media_type == "movie" else media.cover_url
         if image_url:
-            ImageLoader.load_async(image_url, self._set_image, size=(200, 300))
+            ImageLoader.load_async(image_url, self._set_image, size=(220, 330))
 
         # Title
         ctk.CTkLabel(
             scroll,
             text=media.title,
-            font=ctk.CTkFont(size=22, weight="bold"),
+            font=ctk.CTkFont(size=24, weight="bold"),
+            text_color=THEME["text_primary"],
             wraplength=450,
         ).pack(pady=(0, 5))
 
@@ -512,7 +646,7 @@ class MediaDetailDialog(ctk.CTkToplevel):
             scroll,
             text=subtitle,
             font=ctk.CTkFont(size=14),
-            text_color=("gray40", "gray60"),
+            text_color=THEME["text_secondary"],
         ).pack(pady=(0, 15))
 
         # Genre/Subjects
@@ -521,7 +655,7 @@ class MediaDetailDialog(ctk.CTkToplevel):
                 scroll,
                 text=media.genre,
                 font=ctk.CTkFont(size=13),
-                text_color=("gray50", "gray50"),
+                text_color=THEME["text_muted"],
                 wraplength=450,
             ).pack(pady=(0, 10))
         elif media_type == "book" and media.subjects:
@@ -529,7 +663,7 @@ class MediaDetailDialog(ctk.CTkToplevel):
                 scroll,
                 text=media.subjects,
                 font=ctk.CTkFont(size=13),
-                text_color=("gray50", "gray50"),
+                text_color=THEME["text_muted"],
                 wraplength=450,
             ).pack(pady=(0, 10))
 
@@ -539,13 +673,17 @@ class MediaDetailDialog(ctk.CTkToplevel):
                 scroll,
                 text=media.plot,
                 font=ctk.CTkFont(size=13),
+                text_color=THEME["text_secondary"],
                 wraplength=450,
                 justify="left",
             ).pack(pady=(0, 15))
 
         # Status selector
         ctk.CTkLabel(
-            scroll, text="Status", font=ctk.CTkFont(size=14, weight="bold")
+            scroll,
+            text="Status",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w", pady=(10, 5))
 
         if media_type == "movie":
@@ -564,19 +702,34 @@ class MediaDetailDialog(ctk.CTkToplevel):
             variable=self.status_var,
             width=200,
             corner_radius=8,
+            fg_color=THEME["bg_card"],
+            button_color=THEME["accent_primary"],
+            button_hover_color=THEME["accent_hover"],
+            dropdown_fg_color=THEME["bg_card"],
+            dropdown_hover_color=THEME["bg_card_hover"],
         )
         self.status_menu.pack(anchor="w", pady=(0, 15))
 
         # Rating
         ctk.CTkLabel(
-            scroll, text="Your Rating", font=ctk.CTkFont(size=14, weight="bold")
+            scroll,
+            text="Your Rating",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w", pady=(10, 5))
 
         rating_frame = ctk.CTkFrame(scroll, fg_color="transparent")
         rating_frame.pack(anchor="w", pady=(0, 20))
 
         self.rating_slider = ctk.CTkSlider(
-            rating_frame, from_=1, to=10, number_of_steps=9, width=200
+            rating_frame,
+            from_=1,
+            to=10,
+            number_of_steps=9,
+            width=200,
+            progress_color=THEME["accent_primary"],
+            button_color=THEME["accent_primary"],
+            button_hover_color=THEME["accent_hover"],
         )
         self.rating_slider.pack(side="left")
         self.rating_slider.set(media.user_rating or 5)
@@ -584,14 +737,21 @@ class MediaDetailDialog(ctk.CTkToplevel):
         self.rating_label = ctk.CTkLabel(
             rating_frame,
             text=str(media.user_rating or 5),
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=THEME["rating_gold"],
             width=30,
         )
         self.rating_label.pack(side="left", padx=10)
 
         self.rating_slider.configure(command=self._update_rating_label)
 
-        self.use_rating = ctk.CTkCheckBox(scroll, text="Include rating")
+        self.use_rating = ctk.CTkCheckBox(
+            scroll,
+            text="Include rating",
+            text_color=THEME["text_secondary"],
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+        )
         if media.user_rating:
             self.use_rating.select()
         self.use_rating.pack(anchor="w", pady=(0, 20))
@@ -606,11 +766,18 @@ class MediaDetailDialog(ctk.CTkToplevel):
             width=100,
             fg_color="#ef4444",
             hover_color="#dc2626",
+            text_color=THEME["text_primary"],
             command=self._delete,
         ).pack(side="left")
 
         ctk.CTkButton(
-            btn_frame, text="Save Changes", width=150, command=self._save
+            btn_frame,
+            text="Save Changes",
+            width=150,
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+            text_color=THEME["text_primary"],
+            command=self._save,
         ).pack(side="right")
 
     def _set_image(self, image):
@@ -632,13 +799,13 @@ class MediaDetailDialog(ctk.CTkToplevel):
 
 
 class MainContent(ctk.CTkFrame):
-    """Main content area."""
+    """Dark cinematic main content area."""
 
     def __init__(self, parent, app: "MediaTrackerApp", **kwargs):
         super().__init__(parent, **kwargs)
 
         self.app = app
-        self.configure(fg_color="transparent")
+        self.configure(fg_color=THEME["bg_primary"])
 
         # Header
         self.header = ctk.CTkFrame(self, fg_color="transparent", height=60)
@@ -649,6 +816,7 @@ class MainContent(ctk.CTkFrame):
             self.header,
             text="Movies",
             font=ctk.CTkFont(size=28, weight="bold"),
+            text_color=THEME["text_primary"],
         )
         self.title_label.pack(side="left", anchor="w")
 
@@ -662,6 +830,10 @@ class MainContent(ctk.CTkFrame):
             width=250,
             height=38,
             corner_radius=10,
+            fg_color=THEME["bg_card"],
+            border_color=THEME["bg_card_hover"],
+            text_color=THEME["text_primary"],
+            placeholder_text_color=THEME["text_muted"],
         )
         self.search_entry.pack(side="left", padx=(0, 10))
         self.search_entry.bind("<Return>", lambda e: self._on_search())
@@ -672,6 +844,8 @@ class MainContent(ctk.CTkFrame):
             width=38,
             height=38,
             corner_radius=10,
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
             command=self._on_search,
         )
         self.search_btn.pack(side="left")
@@ -681,10 +855,16 @@ class MainContent(ctk.CTkFrame):
         self.tab_frame.pack(fill="x", padx=30, pady=(0, 10))
 
         self.tabs = {}
+        self.tab_underlines = {}
         self.current_tab = "all"
 
         # Content area (scrollable)
-        self.content_scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.content_scroll = ctk.CTkScrollableFrame(
+            self,
+            fg_color="transparent",
+            scrollbar_button_color=THEME["bg_card"],
+            scrollbar_button_hover_color=THEME["bg_card_hover"],
+        )
         self.content_scroll.pack(fill="both", expand=True, padx=20, pady=10)
 
         # Grid frame for cards
@@ -696,39 +876,52 @@ class MainContent(ctk.CTkFrame):
         self._last_width = 0
 
     def _create_tabs(self, tabs: list):
-        """Create filter tabs."""
+        """Create filter tabs with orange underline indicator."""
         for widget in self.tab_frame.winfo_children():
             widget.destroy()
 
         self.tabs = {}
+        self.tab_underlines = {}
+
         for key, label in tabs:
+            # Container for tab + underline
+            tab_container = ctk.CTkFrame(self.tab_frame, fg_color="transparent")
+            tab_container.pack(side="left", padx=(0, 8))
+
             btn = ctk.CTkButton(
-                self.tab_frame,
+                tab_container,
                 text=label,
                 height=32,
                 corner_radius=8,
-                fg_color="transparent" if key != self.current_tab else ("gray80", "gray25"),
-                text_color=("gray40", "gray60") if key != self.current_tab else ("gray10", "white"),
-                hover_color=("gray85", "gray20"),
+                fg_color="transparent",
+                text_color=THEME["text_primary"] if key == self.current_tab else THEME["text_secondary"],
+                hover_color=THEME["bg_card"],
                 command=lambda k=key: self._on_tab_click(k),
             )
-            btn.pack(side="left", padx=(0, 8))
+            btn.pack()
+
+            # Orange underline for active tab
+            underline = ctk.CTkFrame(
+                tab_container,
+                height=3,
+                corner_radius=2,
+                fg_color=THEME["accent_primary"] if key == self.current_tab else "transparent",
+            )
+            underline.pack(fill="x", pady=(2, 0))
+
             self.tabs[key] = btn
+            self.tab_underlines[key] = underline
 
     def _on_tab_click(self, key: str):
         """Handle tab click."""
         self.current_tab = key
         for k, btn in self.tabs.items():
             if k == key:
-                btn.configure(
-                    fg_color=("gray80", "gray25"),
-                    text_color=("gray10", "white"),
-                )
+                btn.configure(text_color=THEME["text_primary"])
+                self.tab_underlines[k].configure(fg_color=THEME["accent_primary"])
             else:
-                btn.configure(
-                    fg_color="transparent",
-                    text_color=("gray40", "gray60"),
-                )
+                btn.configure(text_color=THEME["text_secondary"])
+                self.tab_underlines[k].configure(fg_color="transparent")
         self.app.refresh_content()
 
     def _on_search(self):
@@ -794,7 +987,7 @@ class MainContent(ctk.CTkFrame):
                 self.grid_frame,
                 text="Add some movies and books to your watchlist\nto get personalized recommendations!",
                 font=ctk.CTkFont(size=16),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
             ).pack(pady=50)
 
         self.search_frame.pack(side="right")
@@ -808,13 +1001,14 @@ class MainContent(ctk.CTkFrame):
             section,
             text=title,
             font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w", pady=(0, 5))
 
         ctk.CTkLabel(
             section,
             text=reason,
             font=ctk.CTkFont(size=13),
-            text_color=("gray40", "gray60"),
+            text_color=THEME["text_secondary"],
         ).pack(anchor="w", pady=(0, 15))
 
         if media_type == "movie":
@@ -862,14 +1056,15 @@ class MainContent(ctk.CTkFrame):
         self.search_frame.pack(side="right")
 
     def _create_stats_card(self, parent, title, stats, media_type):
-        """Create a statistics card."""
-        card = ctk.CTkFrame(parent, corner_radius=15, fg_color=("gray90", "gray17"))
+        """Create a dark themed statistics card."""
+        card = ctk.CTkFrame(parent, corner_radius=15, fg_color=THEME["bg_card"])
         card.pack(fill="x", pady=10)
 
         ctk.CTkLabel(
             card,
             text=title,
             font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w", padx=20, pady=(20, 15))
 
         # Stats grid
@@ -897,22 +1092,23 @@ class MainContent(ctk.CTkFrame):
                 stat_item,
                 text=str(value),
                 font=ctk.CTkFont(size=32, weight="bold"),
+                text_color=THEME["text_primary"],
             ).pack()
 
             ctk.CTkLabel(
                 stat_item,
                 text=label,
                 font=ctk.CTkFont(size=12),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
             ).pack()
 
-        # Average rating
+        # Average rating with gold color
         if stats.get("avg_user_rating"):
             ctk.CTkLabel(
                 card,
                 text=f"Average Rating: ★ {stats['avg_user_rating']}/10",
                 font=ctk.CTkFont(size=14),
-                text_color=("#f59e0b", "#fbbf24"),
+                text_color=THEME["rating_gold"],
             ).pack(anchor="w", padx=20, pady=(0, 10))
 
         # Top genres/subjects
@@ -924,7 +1120,7 @@ class MainContent(ctk.CTkFrame):
                 card,
                 text=f"{label}: {items_text}",
                 font=ctk.CTkFont(size=13),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
                 wraplength=500,
             ).pack(anchor="w", padx=20, pady=(0, 20))
 
@@ -939,7 +1135,7 @@ class MainContent(ctk.CTkFrame):
                 self.grid_frame,
                 text="No results found",
                 font=ctk.CTkFont(size=16),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
             ).pack(pady=50)
             return
 
@@ -947,6 +1143,7 @@ class MainContent(ctk.CTkFrame):
             self.grid_frame,
             text=f"Search Results ({len(results)})",
             font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(anchor="w", padx=10, pady=(10, 15))
 
         for result in results:
@@ -983,7 +1180,7 @@ class MainContent(ctk.CTkFrame):
                 self.grid_frame,
                 text=f"No {media_type}s yet. Search to add some!",
                 font=ctk.CTkFont(size=16),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
             ).pack(pady=50)
             return
 
@@ -996,13 +1193,13 @@ class MainContent(ctk.CTkFrame):
                 self.grid_frame,
                 text=f"No {media_type}s in this category",
                 font=ctk.CTkFont(size=16),
-                text_color=("gray40", "gray60"),
+                text_color=THEME["text_secondary"],
             ).pack(pady=50)
             return
 
-        # Calculate columns based on width
+        # Calculate columns based on width (larger cards now 210px)
         width = self.winfo_width()
-        card_width = 190
+        card_width = 210
         columns = max(1, (width - 60) // card_width)
 
         # Create grid
@@ -1036,7 +1233,7 @@ class MainContent(ctk.CTkFrame):
 
 
 class MediaTrackerApp(ctk.CTk):
-    """Main application window."""
+    """Main application window with dark cinematic theme."""
 
     def __init__(self):
         super().__init__()
@@ -1044,6 +1241,7 @@ class MediaTrackerApp(ctk.CTk):
         self.title("Media Tracker")
         self.geometry("1200x800")
         self.minsize(800, 600)
+        self.configure(fg_color=THEME["bg_primary"])
 
         # Initialize backend
         try:
@@ -1189,10 +1387,11 @@ class MediaTrackerApp(ctk.CTk):
         MediaDetailDialog(self, media, media_type, on_update, on_delete)
 
     def _show_error(self, message: str):
-        """Show error dialog."""
+        """Show dark themed error dialog."""
         dialog = ctk.CTkToplevel(self)
         dialog.title("Error")
         dialog.geometry("400x150")
+        dialog.configure(fg_color=THEME["bg_secondary"])
         dialog.transient(self)
         dialog.grab_set()
         dialog.lift()
@@ -1208,16 +1407,26 @@ class MediaTrackerApp(ctk.CTk):
             dialog,
             text="⚠️ Error",
             font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=THEME["text_primary"],
         ).pack(pady=(20, 10))
 
         ctk.CTkLabel(
             dialog,
             text=message,
             font=ctk.CTkFont(size=14),
+            text_color=THEME["text_secondary"],
             wraplength=350,
         ).pack(pady=(0, 20))
 
-        ctk.CTkButton(dialog, text="OK", width=100, command=dialog.destroy).pack()
+        ctk.CTkButton(
+            dialog,
+            text="OK",
+            width=100,
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+            text_color=THEME["text_primary"],
+            command=dialog.destroy,
+        ).pack()
 
 
 def main():
