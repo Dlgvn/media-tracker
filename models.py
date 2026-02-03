@@ -33,6 +33,7 @@ class Movie:
     user_rating: Optional[int] = None
     date_added: Optional[datetime] = None
     date_completed: Optional[datetime] = None
+    is_favorite: bool = False
 
     @classmethod
     def from_db_row(cls, row: dict) -> "Movie":
@@ -53,6 +54,7 @@ class Movie:
             user_rating=row.get("user_rating"),
             date_added=datetime.fromisoformat(date_added.replace("Z", "+00:00")) if date_added else None,
             date_completed=datetime.fromisoformat(date_completed.replace("Z", "+00:00")) if date_completed else None,
+            is_favorite=row.get("is_favorite", False),
         )
 
 
@@ -69,6 +71,7 @@ class Book:
     user_rating: Optional[int] = None
     date_added: Optional[datetime] = None
     date_completed: Optional[datetime] = None
+    is_favorite: bool = False
 
     @classmethod
     def from_db_row(cls, row: dict) -> "Book":
@@ -87,4 +90,5 @@ class Book:
             user_rating=row.get("user_rating"),
             date_added=datetime.fromisoformat(date_added.replace("Z", "+00:00")) if date_added else None,
             date_completed=datetime.fromisoformat(date_completed.replace("Z", "+00:00")) if date_completed else None,
+            is_favorite=row.get("is_favorite", False),
         )

@@ -42,6 +42,7 @@ class Database:
             "status": movie.status.value,
             "user_rating": movie.user_rating,
             "date_completed": movie.date_completed.isoformat() if movie.date_completed else None,
+            "is_favorite": movie.is_favorite,
         }
 
         result = self.client.table("movies").insert(data).execute()
@@ -97,6 +98,27 @@ class Database:
         result = self.client.table("movies").delete().eq("id", movie_id).execute()
         return len(result.data) > 0
 
+    def toggle_movie_favorite(self, movie_id: int, is_favorite: bool) -> bool:
+        """Toggle favorite status for a movie."""
+        result = (
+            self.client.table("movies")
+            .update({"is_favorite": is_favorite})
+            .eq("id", movie_id)
+            .execute()
+        )
+        return len(result.data) > 0
+
+    def get_favorite_movies(self) -> List[Movie]:
+        """Get all favorite movies."""
+        result = (
+            self.client.table("movies")
+            .select("*")
+            .eq("is_favorite", True)
+            .order("date_added", desc=True)
+            .execute()
+        )
+        return [Movie.from_db_row(row) for row in result.data]
+
     # Book operations
     def add_book(self, book: Book) -> int:
         """Add a book to the database. Returns the book ID."""
@@ -110,6 +132,7 @@ class Database:
             "status": book.status.value,
             "user_rating": book.user_rating,
             "date_completed": book.date_completed.isoformat() if book.date_completed else None,
+            "is_favorite": book.is_favorite,
         }
 
         result = self.client.table("books").insert(data).execute()
@@ -164,6 +187,27 @@ class Database:
         """Delete a book by ID."""
         result = self.client.table("books").delete().eq("id", book_id).execute()
         return len(result.data) > 0
+
+    def toggle_book_favorite(self, book_id: int, is_favorite: bool) -> bool:
+        """Toggle favorite status for a book."""
+        result = (
+            self.client.table("books")
+            .update({"is_favorite": is_favorite})
+            .eq("id", book_id)
+            .execute()
+        )
+        return len(result.data) > 0
+
+    def get_favorite_books(self) -> List[Book]:
+        """Get all favorite books."""
+        result = (
+            self.client.table("books")
+            .select("*")
+            .eq("is_favorite", True)
+            .order("date_added", desc=True)
+            .execute()
+        )
+        return [Book.from_db_row(row) for row in result.data]
 
     # Statistics
     def get_movie_stats(self) -> dict:
