@@ -1,57 +1,73 @@
 # Media Tracker
 
-A modern Python application to track movies and books with an Instagram-like GUI interface. Features cloud storage with Supabase, API integrations for movie/book data, and personalized recommendations.
+A Python application to track movies and books with an Instagram-like GUI interface. Features local JSON storage or cloud storage with Supabase, API integrations for movie/book data, and personalized recommendations.
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-green.svg)
-![Supabase](https://img.shields.io/badge/Database-Supabase-orange.svg)
 
 ## Features
 
-- **Modern GUI** - Instagram-inspired interface with dark/light mode support
+- **Modern GUI** - Netflix-inspired dark interface with orange accents
 - **Movie Tracking** - Search movies via OMDB API, track watch status and ratings
 - **Book Tracking** - Search books via Open Library API, track reading progress
-- **Cloud Storage** - Data persisted in Supabase (PostgreSQL)
-- **Smart Recommendations** - Genre-based suggestions from your watchlist/reading list
+- **Favorites** - Mark items with heart icon for quick access
+- **Sort Options** - Sort by date added, title, or rating
+- **Smart Recommendations** - Genre-based suggestions from your library
 - **Statistics** - View your media consumption stats and favorite genres
-- **Responsive Design** - Adapts to window resizing
+- **Two Storage Options** - Local JSON files or Supabase cloud
 
-## Screenshots
+## Quick Start (Local Storage)
 
-The app features:
-- Sidebar navigation (Movies, Books, For You, Statistics)
-- Card-based media display with posters/covers
-- Status badges (Watched/Watching/Want to Watch)
-- Star ratings
-- Search with instant results
+No database setup required. Data stored in `~/.media-tracker/`.
 
-## Installation
-
-### Prerequisites
-
-- Python 3.8 or higher
-- Supabase account (free tier works)
-- OMDB API key (free at [omdbapi.com](https://www.omdbapi.com/apikey.aspx))
-
-### 1. Clone/Download
+### 1. Install Dependencies
 
 ```bash
-cd ~/media-tracker
+pip install customtkinter Pillow requests
 ```
 
-### 2. Install Dependencies
+### 2. Run the App
+
+**GUI App:**
+```bash
+./run_gui_local.sh
+# or
+python3 gui_app_local.py
+```
+
+**CLI App:**
+```bash
+./run_local.sh
+# or
+python3 media_tracker_local.py
+```
+
+### 3. Optional: Enable Movie Search
+
+Get a free API key at [omdbapi.com](https://www.omdbapi.com/apikey.aspx), then:
+
+```bash
+export OMDB_API_KEY="your-key-here"
+```
+
+Book search works without any API key.
+
+## Cloud Storage Setup (Supabase)
+
+For cloud storage with Supabase:
+
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Set Up Supabase
+### 2. Set Up Supabase
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Go to SQL Editor and run:
+2. Run this SQL in the SQL Editor:
 
 ```sql
--- Create tables
 CREATE TABLE movies (
     id BIGSERIAL PRIMARY KEY,
     imdb_id TEXT UNIQUE NOT NULL,
@@ -65,7 +81,8 @@ CREATE TABLE movies (
     status TEXT NOT NULL,
     user_rating INTEGER CHECK (user_rating >= 1 AND user_rating <= 10),
     date_added TIMESTAMPTZ DEFAULT NOW(),
-    date_completed TIMESTAMPTZ
+    date_completed TIMESTAMPTZ,
+    is_favorite BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE books (
@@ -79,25 +96,15 @@ CREATE TABLE books (
     status TEXT NOT NULL,
     user_rating INTEGER CHECK (user_rating >= 1 AND user_rating <= 10),
     date_added TIMESTAMPTZ DEFAULT NOW(),
-    date_completed TIMESTAMPTZ
+    date_completed TIMESTAMPTZ,
+    is_favorite BOOLEAN DEFAULT FALSE
 );
 
--- Disable RLS for personal use
 ALTER TABLE movies DISABLE ROW LEVEL SECURITY;
 ALTER TABLE books DISABLE ROW LEVEL SECURITY;
-
--- Optional: Add indexes
-CREATE INDEX idx_movies_status ON movies(status);
-CREATE INDEX idx_books_status ON books(status);
 ```
 
-3. Get your credentials from Project Settings → API:
-   - Project URL
-   - Anon/Public key
-
-### 4. Configure Environment
-
-Edit `run_gui.sh` with your credentials:
+### 3. Configure Environment
 
 ```bash
 export SUPABASE_URL="https://your-project.supabase.co"
@@ -105,41 +112,14 @@ export SUPABASE_KEY="your-anon-key"
 export OMDB_API_KEY="your-omdb-key"
 ```
 
-Or set them manually:
+### 4. Run
 
 ```bash
-export SUPABASE_URL="your-url"
-export SUPABASE_KEY="your-key"
-export OMDB_API_KEY="your-key"
+./run_gui.sh      # GUI with Supabase
+./run.sh          # CLI with Supabase
 ```
 
 ## Usage
-
-### GUI Application (Recommended)
-
-```bash
-./run_gui.sh
-```
-
-Or manually:
-
-```bash
-python3 gui_app.py
-```
-
-### CLI Application
-
-```bash
-./run.sh
-```
-
-Or manually:
-
-```bash
-python3 media_tracker.py
-```
-
-## How to Use
 
 ### Adding Media
 
@@ -147,73 +127,78 @@ python3 media_tracker.py
 2. Type in the search bar and press Enter
 3. Click **+ Add** on any search result
 4. Choose status and optional rating
-5. Click **Add to Library**
 
 ### Managing Media
 
-1. Click on any media card to open details
-2. Change status (Want to Watch → Watching → Watched)
-3. Update your rating
-4. Click **Save Changes** or **Delete**
+- Click on any card to view details and edit
+- Change status (Want to Watch → Watching → Watched)
+- Update your rating
+- Delete items
 
-### Getting Recommendations
+### Favorites
 
-1. Click **For You** in the sidebar
-2. View smart recommendations based on your rated items
-3. Recommendations favor genres/subjects you rate highly
+- Click the **heart icon** on any card to toggle favorite
+- Use the **Favorites tab** to filter
 
-### Viewing Statistics
+### Sorting
 
-1. Click **Statistics** in the sidebar
-2. See counts by status
-3. View average ratings and top genres/subjects
+Use the **Sort dropdown** to sort by:
+- Date Added (newest first)
+- Title (A-Z or Z-A)
+- Rating (highest or lowest first)
 
 ## Project Structure
 
 ```
 media-tracker/
-├── gui_app.py          # GUI application (CustomTkinter)
-├── media_tracker.py    # CLI application
-├── database.py         # Supabase database operations
-├── movie_api.py        # OMDB API integration
-├── book_api.py         # Open Library API integration
-├── recommender.py      # Recommendation engine
-├── models.py           # Data models (Movie, Book)
-├── requirements.txt    # Python dependencies
-├── run_gui.sh          # GUI launch script
-├── run.sh              # CLI launch script
-└── README.md           # This file
+├── gui_app_local.py      # GUI app (local storage)
+├── gui_app.py            # GUI app (Supabase)
+├── media_tracker_local.py # CLI app (local storage)
+├── media_tracker.py      # CLI app (Supabase)
+├── local_database.py     # JSON file database
+├── database.py           # Supabase database
+├── movie_api.py          # OMDB API integration
+├── book_api.py           # Open Library API
+├── recommender.py        # Recommendation engine
+├── models.py             # Data models
+├── run_gui_local.sh      # Run local GUI
+├── run_local.sh          # Run local CLI
+├── run_gui.sh            # Run Supabase GUI
+├── run.sh                # Run Supabase CLI
+└── requirements.txt      # Dependencies
 ```
 
-## Dependencies
+## Data Storage
 
-- **customtkinter** - Modern GUI framework
-- **Pillow** - Image processing for posters/covers
-- **requests** - HTTP requests for APIs
-- **supabase** - Supabase Python client
+### Local Storage
+Data is stored in `~/.media-tracker/`:
+- `movies.json` - Your movie library
+- `books.json` - Your book library
+
+### Cloud Storage
+Data is stored in Supabase PostgreSQL tables.
 
 ## API References
 
-- **OMDB API** - [omdbapi.com](https://www.omdbapi.com/) - Movie data
-- **Open Library API** - [openlibrary.org/developers](https://openlibrary.org/developers/api) - Book data
+- **OMDB API** - [omdbapi.com](https://www.omdbapi.com/) - Movie data (requires free API key)
+- **Open Library API** - [openlibrary.org](https://openlibrary.org/developers/api) - Book data (no key required)
 
 ## Troubleshooting
 
-### "Invalid API key" error
-- Verify your Supabase anon key starts with `eyJ...`
-- Check OMDB API key is valid at omdbapi.com
+### "OMDB API key not configured"
+Set the environment variable:
+```bash
+export OMDB_API_KEY="your-key"
+```
 
 ### GUI not appearing
-- Ensure you have a display (not running headless)
-- Try: `python3 -c "import tkinter; tkinter.Tk()"`
+Ensure you have a display and tkinter is installed:
+```bash
+python3 -c "import tkinter; tkinter.Tk()"
+```
 
-### Database connection failed
-- Check Supabase URL format: `https://xxx.supabase.co`
-- Verify RLS is disabled or policies are set
-
-### Search not working
-- Movies: Check OMDB_API_KEY is set
-- Books: Open Library requires no key, check internet
+### Book search not working
+Check your internet connection. Open Library API requires no key.
 
 ## License
 
