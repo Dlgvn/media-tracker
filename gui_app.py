@@ -852,7 +852,7 @@ class MainContent(ctk.CTkFrame):
 
         # Sort dropdown
         self.current_sort = "date_added"
-        self.sort_options = ["Date Added", "Title (A-Z)", "Rating (High-Low)"]
+        self.sort_options = ["Date Added", "Title (A-Z)", "Title (Z-A)", "Rating (High-Low)", "Rating (Low-High)"]
         self.sort_var = ctk.StringVar(value=self.sort_options[0])
 
         ctk.CTkLabel(
@@ -962,8 +962,10 @@ class MainContent(ctk.CTkFrame):
         """Handle sort option change."""
         sort_map = {
             "Date Added": "date_added",
-            "Title (A-Z)": "title",
-            "Rating (High-Low)": "rating",
+            "Title (A-Z)": "title_asc",
+            "Title (Z-A)": "title_desc",
+            "Rating (High-Low)": "rating_desc",
+            "Rating (Low-High)": "rating_asc",
         }
         self.current_sort = sort_map.get(choice, "date_added")
         self.app.refresh_content()
@@ -1236,11 +1238,16 @@ class MainContent(ctk.CTkFrame):
             return
 
         # Sort items based on current sort option
-        if self.current_sort == "title":
+        if self.current_sort == "title_asc":
             items = sorted(items, key=lambda x: x.title.lower())
-        elif self.current_sort == "rating":
+        elif self.current_sort == "title_desc":
+            items = sorted(items, key=lambda x: x.title.lower(), reverse=True)
+        elif self.current_sort == "rating_desc":
             # Sort by rating descending, items without rating go last
             items = sorted(items, key=lambda x: (x.user_rating is None, -(x.user_rating or 0)))
+        elif self.current_sort == "rating_asc":
+            # Sort by rating ascending, items without rating go last
+            items = sorted(items, key=lambda x: (x.user_rating is None, x.user_rating or 0))
         else:  # date_added (default)
             items = sorted(items, key=lambda x: x.date_added or "", reverse=True)
 
