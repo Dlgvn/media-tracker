@@ -883,6 +883,34 @@ class MainContent(ctk.CTkFrame):
         )
         self.search_btn.pack(side="left")
 
+        # Sort dropdown
+        self.current_sort = "date_added"
+        self.sort_options = ["Date Added", "Title (A-Z)", "Title (Z-A)", "Rating (High-Low)", "Rating (Low-High)"]
+        self.sort_var = ctk.StringVar(value=self.sort_options[0])
+
+        ctk.CTkLabel(
+            self.search_frame,
+            text="Sort:",
+            font=ctk.CTkFont(size=12),
+            text_color=THEME["text_secondary"],
+        ).pack(side="left", padx=(15, 5))
+
+        self.sort_menu = ctk.CTkOptionMenu(
+            self.search_frame,
+            values=self.sort_options,
+            variable=self.sort_var,
+            width=140,
+            height=38,
+            corner_radius=10,
+            fg_color=THEME["bg_card"],
+            button_color=THEME["accent_primary"],
+            button_hover_color=THEME["accent_hover"],
+            dropdown_fg_color=THEME["bg_card"],
+            dropdown_hover_color=THEME["bg_card_hover"],
+            command=self._on_sort_change,
+        )
+        self.sort_menu.pack(side="left")
+
         # Tab bar for filtering
         self.tab_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.tab_frame.pack(fill="x", padx=30, pady=(0, 10))
@@ -962,6 +990,18 @@ class MainContent(ctk.CTkFrame):
         query = self.search_entry.get().strip()
         if query:
             self.app.perform_search(query)
+
+    def _on_sort_change(self, choice: str):
+        """Handle sort option change."""
+        sort_map = {
+            "Date Added": "date_added",
+            "Title (A-Z)": "title_asc",
+            "Title (Z-A)": "title_desc",
+            "Rating (High-Low)": "rating_desc",
+            "Rating (Low-High)": "rating_asc",
+        }
+        self.current_sort = sort_map.get(choice, "date_added")
+        self.app.refresh_content()
 
     def _on_resize(self, event):
         """Handle window resize for responsive grid."""
@@ -1233,6 +1273,20 @@ class MainContent(ctk.CTkFrame):
                 text_color=THEME["text_secondary"],
             ).pack(pady=50)
             return
+
+        # Sort items based on current sort option
+        if self.current_sort == "title_asc":
+            items = sorted(items, key=lambda x: x.title.lower())
+        elif self.current_sort == "title_desc":
+            items = sorted(items, key=lambda x: x.title.lower(), reverse=True)
+        elif self.current_sort == "rating_desc":
+            # Sort by rating descending, items without rating go last
+            items = sorted(items, key=lambda x: (x.user_rating is None, -(x.user_rating or 0)))
+        elif self.current_sort == "rating_asc":
+            # Sort by rating ascending, items without rating go last
+            items = sorted(items, key=lambda x: (x.user_rating is None, x.user_rating or 0))
+        else:  # date_added (default)
+            items = sorted(items, key=lambda x: x.date_added or "", reverse=True)
 
         # Calculate columns based on width (larger cards now 210px)
         width = self.winfo_width()
