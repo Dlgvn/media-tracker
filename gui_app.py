@@ -127,11 +127,15 @@ class MediaCard(ctk.CTkFrame):
         rating: Optional[int],
         image_url: Optional[str],
         on_click: Optional[Callable] = None,
+        is_favorite: bool = False,
+        on_favorite_toggle: Optional[Callable] = None,
         **kwargs,
     ):
         super().__init__(parent, **kwargs)
 
         self.on_click = on_click
+        self.on_favorite_toggle = on_favorite_toggle
+        self.is_favorite = is_favorite
         self.configure(
             corner_radius=12,
             fg_color=THEME["bg_card"],
@@ -195,10 +199,14 @@ class MediaCard(ctk.CTkFrame):
         )
         self.status_badge.pack(pady=(5, 0))
 
+        # Bottom row with rating and favorite button
+        bottom_frame = ctk.CTkFrame(self, fg_color="transparent")
+        bottom_frame.pack(fill="x", padx=8, pady=(5, 10))
+
         # IMDB-style gold rating badge
         if rating:
-            rating_frame = ctk.CTkFrame(self, fg_color="transparent")
-            rating_frame.pack(pady=(5, 10))
+            rating_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+            rating_frame.pack(side="left")
 
             self.rating_label = ctk.CTkLabel(
                 rating_frame,
@@ -215,8 +223,22 @@ class MediaCard(ctk.CTkFrame):
                 text_color=THEME["text_muted"],
             ).pack(side="left")
         else:
-            self.rating_label = ctk.CTkLabel(self, text="", height=10)
-            self.rating_label.pack(pady=(0, 10))
+            self.rating_label = ctk.CTkLabel(bottom_frame, text="", height=10)
+            self.rating_label.pack(side="left")
+
+        # Favorite heart button
+        heart_text = "❤️" if is_favorite else "🤍"
+        self.favorite_btn = ctk.CTkButton(
+            bottom_frame,
+            text=heart_text,
+            width=30,
+            height=30,
+            corner_radius=15,
+            fg_color="transparent",
+            hover_color=THEME["bg_card_hover"],
+            command=self._toggle_favorite,
+        )
+        self.favorite_btn.pack(side="right")
 
         # Bind click and hover to all widgets
         if on_click:
@@ -224,12 +246,23 @@ class MediaCard(ctk.CTkFrame):
 
     def _bind_events_recursive(self, widget):
         """Bind click and hover events to widget and all its children."""
+        # Skip the favorite button - it has its own click handler
+        if widget == self.favorite_btn:
+            return
         widget.bind("<Button-1>", self._handle_click)
         widget.bind("<Enter>", self._on_hover_enter)
         widget.bind("<Leave>", self._on_hover_leave)
         widget.configure(cursor="hand2")
         for child in widget.winfo_children():
             self._bind_events_recursive(child)
+
+    def _toggle_favorite(self):
+        """Toggle favorite status."""
+        self.is_favorite = not self.is_favorite
+        heart_text = "❤️" if self.is_favorite else "🤍"
+        self.favorite_btn.configure(text=heart_text)
+        if self.on_favorite_toggle:
+            self.on_favorite_toggle(self.is_favorite)
 
     def _on_hover_enter(self, event):
         """Handle hover enter - orange glow effect."""
@@ -942,6 +975,7 @@ class MainContent(ctk.CTkFrame):
         self.search_entry.configure(placeholder_text="Search movies...")
         self._create_tabs([
             ("all", "All"),
+            ("favorites", "❤️ Favorites"),
             ("watched", "Watched"),
             ("watching", "Watching"),
             ("want_to_watch", "Want to Watch"),
@@ -954,6 +988,7 @@ class MainContent(ctk.CTkFrame):
         self.search_entry.configure(placeholder_text="Search books...")
         self._create_tabs([
             ("all", "All"),
+            ("favorites", "❤️ Favorites"),
             ("read", "Read"),
             ("reading", "Reading"),
             ("want_to_read", "Want to Read"),
@@ -1185,7 +1220,9 @@ class MainContent(ctk.CTkFrame):
             return
 
         # Filter by tab
-        if self.current_tab != "all":
+        if self.current_tab == "favorites":
+            items = [i for i in items if i.is_favorite]
+        elif self.current_tab != "all":
             items = [i for i in items if i.status.value == self.current_tab]
 
         if not items:
@@ -1218,6 +1255,8 @@ class MainContent(ctk.CTkFrame):
                     rating=item.user_rating,
                     image_url=item.poster_url,
                     on_click=lambda m=item: self.app.show_detail(m, "movie"),
+                    is_favorite=item.is_favorite,
+                    on_favorite_toggle=lambda fav, m=item: self.app.toggle_favorite(m, "movie", fav),
                 )
             else:
                 card = MediaCard(
@@ -1228,6 +1267,8 @@ class MainContent(ctk.CTkFrame):
                     rating=item.user_rating,
                     image_url=item.cover_url,
                     on_click=lambda b=item: self.app.show_detail(b, "book"),
+                    is_favorite=item.is_favorite,
+                    on_favorite_toggle=lambda fav, b=item: self.app.toggle_favorite(b, "book", fav),
                 )
             card.pack(side="left", padx=10, pady=10)
 
@@ -1385,6 +1426,13 @@ class MediaTrackerApp(ctk.CTk):
             self.refresh_content()
 
         MediaDetailDialog(self, media, media_type, on_update, on_delete)
+
+    def toggle_favorite(self, media, media_type: str, is_favorite: bool):
+        """Toggle favorite status for a media item."""
+        if media_type == "movie":
+            self.db.toggle_movie_favorite(media.id, is_favorite)
+        else:
+            self.db.toggle_book_favorite(media.id, is_favorite)
 
     def _show_error(self, message: str):
         """Show dark themed error dialog."""
