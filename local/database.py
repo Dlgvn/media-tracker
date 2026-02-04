@@ -14,7 +14,7 @@ class DatabaseError(Exception):
     pass
 
 
-class LocalDatabase:
+class Database:
     """JSON file-based local database for media tracking."""
 
     def __init__(self, data_dir: str = None):

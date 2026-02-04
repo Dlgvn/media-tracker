@@ -16,6 +16,38 @@ A Python application to track movies and books with an Instagram-like GUI interf
 - **Statistics** - View your media consumption stats and favorite genres
 - **Two Storage Options** - Local JSON files or Supabase cloud
 
+## Project Structure
+
+The project is organized into two separate standalone applications:
+
+```
+media-tracker/
+├── local/                    # Local JSON storage version
+│   ├── database.py           # JSON file database operations
+│   ├── models.py             # Data models
+│   ├── movie_api.py          # OMDB API integration
+│   ├── book_api.py           # Open Library API
+│   ├── recommender.py        # Recommendation engine
+│   ├── media_tracker.py      # CLI app
+│   ├── gui_app.py            # GUI app
+│   ├── run.sh                # Run CLI
+│   └── run_gui.sh            # Run GUI
+│
+├── supabase/                 # Supabase cloud storage version
+│   ├── database.py           # Supabase database operations
+│   ├── models.py             # Data models
+│   ├── movie_api.py          # OMDB API integration
+│   ├── book_api.py           # Open Library API
+│   ├── recommender.py        # Recommendation engine
+│   ├── media_tracker.py      # CLI app
+│   ├── gui_app.py            # GUI app
+│   ├── run.sh                # Run CLI
+│   └── run_gui.sh            # Run GUI
+│
+├── requirements.txt          # Dependencies
+└── README.md
+```
+
 ## Quick Start (Local Storage)
 
 No database setup required. Data stored in `~/.media-tracker/`.
@@ -30,16 +62,18 @@ pip install customtkinter Pillow requests
 
 **GUI App:**
 ```bash
-./run_gui_local.sh
+cd local
+./run_gui.sh
 # or
-python3 gui_app_local.py
+python3 gui_app.py
 ```
 
 **CLI App:**
 ```bash
-./run_local.sh
+cd local
+./run.sh
 # or
-python3 media_tracker_local.py
+python3 media_tracker.py
 ```
 
 ### 3. Optional: Enable Movie Search
@@ -115,6 +149,7 @@ export OMDB_API_KEY="your-omdb-key"
 ### 4. Run
 
 ```bash
+cd supabase
 ./run_gui.sh      # GUI with Supabase
 ./run.sh          # CLI with Supabase
 ```
@@ -146,27 +181,6 @@ Use the **Sort dropdown** to sort by:
 - Date Added (newest first)
 - Title (A-Z or Z-A)
 - Rating (highest or lowest first)
-
-## Project Structure
-
-```
-media-tracker/
-├── gui_app_local.py      # GUI app (local storage)
-├── gui_app.py            # GUI app (Supabase)
-├── media_tracker_local.py # CLI app (local storage)
-├── media_tracker.py      # CLI app (Supabase)
-├── local_database.py     # JSON file database
-├── database.py           # Supabase database
-├── movie_api.py          # OMDB API integration
-├── book_api.py           # Open Library API
-├── recommender.py        # Recommendation engine
-├── models.py             # Data models
-├── run_gui_local.sh      # Run local GUI
-├── run_local.sh          # Run local CLI
-├── run_gui.sh            # Run Supabase GUI
-├── run.sh                # Run Supabase CLI
-└── requirements.txt      # Dependencies
-```
 
 ## Data Storage
 

@@ -5,7 +5,7 @@ import sys
 from typing import List, Optional
 
 from book_api import BookAPI, OpenLibraryError
-from local_database import LocalDatabase
+from database import Database
 from models import Book, BookStatus, Movie, MovieStatus
 from movie_api import MovieAPI, OMDBError
 from recommender import Recommender
@@ -84,10 +84,10 @@ def display_book(book: Book, show_id: bool = False):
     print()
 
 
-class MediaTrackerLocal:
+class MediaTracker:
     def __init__(self):
         print("Using local JSON storage (~/.media-tracker/)")
-        self.db = LocalDatabase()
+        self.db = Database()
         self.recommender = Recommender(self.db)
         self.movie_api: Optional[MovieAPI] = None
         self.book_api = BookAPI()
@@ -707,7 +707,7 @@ class MediaTrackerLocal:
 
 def main():
     try:
-        tracker = MediaTrackerLocal()
+        tracker = MediaTracker()
         tracker.main_menu()
     except KeyboardInterrupt:
         print("\n\nGoodbye!")

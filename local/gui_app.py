@@ -11,7 +11,7 @@ import customtkinter as ctk
 from PIL import Image, ImageDraw
 
 from book_api import BookAPI, OpenLibraryError
-from local_database import LocalDatabase, DatabaseError
+from database import Database, DatabaseError
 from models import Book, BookStatus, Movie, MovieStatus
 from movie_api import MovieAPI, OMDBError
 from recommender import Recommender
@@ -842,7 +842,7 @@ class MediaDetailDialog(ctk.CTkToplevel):
 class MainContent(ctk.CTkFrame):
     """Dark cinematic main content area."""
 
-    def __init__(self, parent, app: "MediaTrackerLocalApp", **kwargs):
+    def __init__(self, parent, app: "MediaTrackerApp", **kwargs):
         super().__init__(parent, **kwargs)
 
         self.app = app
@@ -1333,7 +1333,7 @@ class MainContent(ctk.CTkFrame):
             card.pack(side="left", padx=10, pady=10)
 
 
-class MediaTrackerLocalApp(ctk.CTk):
+class MediaTrackerApp(ctk.CTk):
     """Main application window with local JSON storage."""
 
     def __init__(self):
@@ -1346,7 +1346,7 @@ class MediaTrackerLocalApp(ctk.CTk):
 
         # Initialize local database
         try:
-            self.db = LocalDatabase()
+            self.db = Database()
             self.recommender = Recommender(self.db)
         except Exception as e:
             self._show_error(f"Database Error: {e}")
@@ -1536,7 +1536,7 @@ class MediaTrackerLocalApp(ctk.CTk):
 
 
 def main():
-    app = MediaTrackerLocalApp()
+    app = MediaTrackerApp()
     app.mainloop()
 
 
