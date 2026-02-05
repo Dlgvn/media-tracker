@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import List, Optional, Tuple, Union
 
 from database import Database
-from models import Book, BookStatus, Movie, MovieStatus
+from models import Book, BookStatus, Movie, MovieStatus, Series, SeriesStatus
 
 
 class Recommender:
@@ -181,3 +181,141 @@ class Recommender:
                 return book, "Random pick from your reading list." if book else "No books in your want to read list."
         else:
             return None, f"Unknown media type: {media_type}"
+
+    def get_similar_movies(self, movie: Movie, limit: int = 5) -> List[Tuple[Movie, float]]:
+        """Get similar movies from the library based on genre, director, year, and rating.
+
+        Scoring:
+        - Genre overlap: 2 points per matching genre
+        - Same director: 3 points
+        - Year proximity: 0.5 points (max 5 points for same decade)
+        - Similar rating: 0.3 points (max 3 points for same rating)
+
+        Returns list of (Movie, score) tuples sorted by score descending.
+        """
+        all_movies = self.db.get_all_movies()
+        scored: List[Tuple[Movie, float]] = []
+
+        movie_genres = set(g.strip() for g in (movie.genre or "").split(", ") if g.strip())
+        movie_year = int(movie.year) if movie.year and movie.year.isdigit() else None
+
+        for other in all_movies:
+            if other.id == movie.id:
+                continue
+
+            score = 0.0
+
+            # Genre overlap (2 points each)
+            other_genres = set(g.strip() for g in (other.genre or "").split(", ") if g.strip())
+            common_genres = movie_genres & other_genres
+            score += len(common_genres) * 2
+
+            # Same director (3 points)
+            if movie.director and other.director and movie.director.lower() == other.director.lower():
+                score += 3
+
+            # Year proximity (up to 5 points for same decade)
+            other_year = int(other.year) if other.year and other.year.isdigit() else None
+            if movie_year and other_year:
+                year_diff = abs(movie_year - other_year)
+                if year_diff <= 10:
+                    score += 0.5 * (10 - year_diff)
+
+            # Similar rating (up to 3 points)
+            if movie.user_rating and other.user_rating:
+                rating_diff = abs(movie.user_rating - other.user_rating)
+                if rating_diff <= 3:
+                    score += 0.3 * (10 - rating_diff)
+
+            if score > 0:
+                scored.append((other, score))
+
+        # Sort by score descending
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:limit]
+
+    def get_similar_books(self, book: Book, limit: int = 5) -> List[Tuple[Book, float]]:
+        """Get similar books from the library based on subjects and author.
+
+        Scoring:
+        - Subject overlap: 2 points per matching subject
+        - Same author: 4 points
+
+        Returns list of (Book, score) tuples sorted by score descending.
+        """
+        all_books = self.db.get_all_books()
+        scored: List[Tuple[Book, float]] = []
+
+        book_subjects = set(s.strip() for s in (book.subjects or "").split(", ") if s.strip())
+
+        for other in all_books:
+            if other.id == book.id:
+                continue
+
+            score = 0.0
+
+            # Subject overlap (2 points each)
+            other_subjects = set(s.strip() for s in (other.subjects or "").split(", ") if s.strip())
+            common_subjects = book_subjects & other_subjects
+            score += len(common_subjects) * 2
+
+            # Same author (4 points)
+            if book.author and other.author and book.author.lower() == other.author.lower():
+                score += 4
+
+            if score > 0:
+                scored.append((other, score))
+
+        # Sort by score descending
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:limit]
+
+    def get_similar_series(self, series: Series, limit: int = 5) -> List[Tuple[Series, float]]:
+        """Get similar series from the library based on genre.
+
+        Scoring:
+        - Genre overlap: 2 points per matching genre
+        - Year proximity: 0.5 points (max 5 points for same decade)
+
+        Returns list of (Series, score) tuples sorted by score descending.
+        """
+        all_series = self.db.get_all_series()
+        scored: List[Tuple[Series, float]] = []
+
+        series_genres = set(g.strip() for g in (series.genre or "").split(", ") if g.strip())
+        series_year = None
+        if series.year:
+            # Handle year ranges like "2019-2023"
+            year_str = series.year.split("-")[0] if "-" in series.year else series.year
+            if year_str.isdigit():
+                series_year = int(year_str)
+
+        for other in all_series:
+            if other.id == series.id:
+                continue
+
+            score = 0.0
+
+            # Genre overlap (2 points each)
+            other_genres = set(g.strip() for g in (other.genre or "").split(", ") if g.strip())
+            common_genres = series_genres & other_genres
+            score += len(common_genres) * 2
+
+            # Year proximity
+            other_year = None
+            if other.year:
+                year_str = other.year.split("-")[0] if "-" in other.year else other.year
+                if year_str.isdigit():
+                    other_year = int(year_str)
+
+            if series_year and other_year:
+                year_diff = abs(series_year - other_year)
+                if year_diff <= 10:
+                    score += 0.5 * (10 - year_diff)
+
+            if score > 0:
+                scored.append((other, score))
+
+        # Sort by score descending
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:limit]

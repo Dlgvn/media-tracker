@@ -1,11 +1,11 @@
-"""OMDB API integration for movie data."""
+"""OMDB API integration for movie and series data."""
 
 import os
 from typing import Dict, List, Optional
 
 import requests
 
-from models import Movie, MovieStatus
+from models import Movie, MovieStatus, Series, SeriesStatus
 
 
 class OMDBError(Exception):
@@ -25,12 +25,17 @@ class MovieAPI:
                 "Get a free API key at: https://www.omdbapi.com/apikey.aspx"
             )
 
-    def search(self, title: str) -> List[Dict]:
-        """Search for movies by title. Returns a list of search results."""
+    def search(self, title: str, media_type: str = "movie") -> List[Dict]:
+        """Search for movies or series by title. Returns a list of search results.
+
+        Args:
+            title: Search query
+            media_type: "movie" or "series"
+        """
         try:
             response = requests.get(
                 self.BASE_URL,
-                params={"apikey": self.api_key, "s": title, "type": "movie"},
+                params={"apikey": self.api_key, "s": title, "type": media_type},
                 timeout=10,
             )
             response.raise_for_status()
@@ -38,7 +43,7 @@ class MovieAPI:
 
             if data.get("Response") == "False":
                 error = data.get("Error", "Unknown error")
-                if error == "Movie not found!":
+                if error in ("Movie not found!", "Series not found!"):
                     return []
                 raise OMDBError(error)
 
@@ -86,5 +91,82 @@ class MovieAPI:
             imdb_rating=(
                 data.get("imdbRating") if data.get("imdbRating") != "N/A" else None
             ),
+            status=status,
+        )
+
+    def get_series_details(self, imdb_id: str) -> Dict:
+        """Get detailed information about a series by IMDB ID."""
+        try:
+            response = requests.get(
+                self.BASE_URL,
+                params={"apikey": self.api_key, "i": imdb_id, "plot": "short"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("Response") == "False":
+                raise OMDBError(data.get("Error", "Unknown error"))
+
+            return data
+        except requests.RequestException as e:
+            raise OMDBError(f"Network error: {e}")
+
+    def get_season_episodes(self, imdb_id: str, season: int) -> List[Dict]:
+        """Get all episodes for a specific season of a series."""
+        try:
+            response = requests.get(
+                self.BASE_URL,
+                params={"apikey": self.api_key, "i": imdb_id, "Season": season},
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if data.get("Response") == "False":
+                return []
+
+            episodes = data.get("Episodes", [])
+            return [
+                {
+                    "episode": int(ep.get("Episode", 0)),
+                    "title": ep.get("Title", "Unknown"),
+                    "released": ep.get("Released"),
+                    "imdb_rating": ep.get("imdbRating") if ep.get("imdbRating") != "N/A" else None,
+                }
+                for ep in episodes
+            ]
+        except requests.RequestException as e:
+            raise OMDBError(f"Network error: {e}")
+
+    def create_series_from_api(
+        self, imdb_id: str, status: SeriesStatus = SeriesStatus.WANT_TO_WATCH
+    ) -> Series:
+        """Fetch series details and create a Series object."""
+        data = self.get_series_details(imdb_id)
+
+        poster_url = data.get("Poster")
+        if poster_url == "N/A":
+            poster_url = None
+
+        # Parse total seasons
+        total_seasons_str = data.get("totalSeasons", "1")
+        try:
+            total_seasons = int(total_seasons_str)
+        except (ValueError, TypeError):
+            total_seasons = 1
+
+        return Series(
+            id=None,
+            imdb_id=data["imdbID"],
+            title=data["Title"],
+            year=data.get("Year"),
+            genre=data.get("Genre") if data.get("Genre") != "N/A" else None,
+            plot=data.get("Plot") if data.get("Plot") != "N/A" else None,
+            poster_url=poster_url,
+            imdb_rating=(
+                data.get("imdbRating") if data.get("imdbRating") != "N/A" else None
+            ),
+            total_seasons=total_seasons,
             status=status,
         )
