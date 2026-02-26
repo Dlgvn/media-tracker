@@ -28,35 +28,36 @@ from movie_api import MovieAPI, OMDBError
 from recommender import Recommender
 
 
-# Dark Cinematic Theme (Netflix/IMDB inspired)
+# Dark Luxury Theme (crimson/gold premium)
 THEME = {
     # Backgrounds
-    "bg_primary": "#0D0D0D",       # Main app background (near-black)
-    "bg_secondary": "#141414",      # Netflix-style dark
-    "bg_card": "#1A1A1A",           # Card backgrounds
-    "bg_card_hover": "#252525",     # Card hover state
-    "bg_sidebar": "#0A0A0A",        # Sidebar background
+    "bg_primary": "#080808",       # Main app background (near-black)
+    "bg_secondary": "#0F0F0F",      # Dialog/panel backgrounds
+    "bg_card": "#141414",           # Card backgrounds
+    "bg_card_hover": "#1E1E1E",     # Card hover state
+    "bg_sidebar": "#050505",        # Sidebar background
 
-    # Orange Accents (Netflix + IMDB inspired)
-    "accent_primary": "#E65100",    # Main orange
-    "accent_hover": "#FF8C00",      # Hover state
-    "accent_glow": "#FF6600",       # Glow effects
+    # Crimson Accents
+    "accent_primary": "#DC143C",    # Crimson red
+    "accent_hover": "#FF1744",      # Hover state
+    "accent_glow": "#FF0030",       # Glow effects
+    "accent_subtle": "#1A0008",     # Crimson-tinted bg for active nav
 
     # Text Colors
     "text_primary": "#FFFFFF",      # White
     "text_secondary": "#B3B3B3",    # Gray
     "text_muted": "#666666",        # Muted
 
-    # Rating (IMDB-style gold)
-    "rating_gold": "#F5C518",
+    # Rating (rich gold)
+    "rating_gold": "#FFD700",
 
     # Status Badge Colors
-    "status_watched": "#4ADE80",    # Green (completed)
-    "status_watching": "#FB923C",   # Orange (in progress)
-    "status_planned": "#60A5FA",    # Blue (wishlist)
+    "status_watched": "#22C55E",    # Green (completed)
+    "status_watching": "#F97316",   # Orange (in progress)
+    "status_planned": "#3B82F6",    # Blue (wishlist)
 }
 
-# Set appearance mode to dark only (cinematic theme)
+# Set appearance mode to dark only (luxury theme)
 ctk.set_appearance_mode("dark")
 
 
