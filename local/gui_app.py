@@ -408,6 +408,164 @@ class SearchResultCard(ctk.CTkFrame):
         self.add_btn.grid(row=0, column=1, padx=(15, 0), sticky="e")
 
 
+class MediaListCard(ctk.CTkFrame):
+    """Dark luxury horizontal list card for media items."""
+
+    def __init__(
+        self,
+        parent,
+        title: str,
+        subtitle: str,
+        status: str,
+        rating: Optional[int],
+        image_url: Optional[str],
+        on_click: Optional[Callable] = None,
+        is_favorite: bool = False,
+        on_favorite_toggle: Optional[Callable] = None,
+        media_id: Optional[int] = None,
+        **kwargs,
+    ):
+        super().__init__(parent, **kwargs)
+
+        self.on_click = on_click
+        self.on_favorite_toggle = on_favorite_toggle
+        self.is_favorite = is_favorite
+        self.media_id = media_id
+
+        self.configure(
+            corner_radius=10,
+            fg_color=THEME["bg_card"],
+            height=90,
+        )
+        self.pack_propagate(False)
+
+        # Poster thumbnail
+        self.image_label = ctk.CTkLabel(
+            self,
+            text="",
+            width=60,
+            height=82,
+            corner_radius=6,
+            fg_color=THEME["bg_secondary"],
+        )
+        self.image_label.pack(side="left", padx=(10, 12), pady=4)
+
+        if image_url:
+            ImageLoader.load_async(image_url, self._set_image, size=(60, 90))
+
+        # Info column
+        info_frame = ctk.CTkFrame(self, fg_color="transparent")
+        info_frame.pack(side="left", fill="both", expand=True, pady=12)
+
+        ctk.CTkLabel(
+            info_frame,
+            text=title[:50] + "..." if len(title) > 50 else title,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=THEME["text_primary"],
+            anchor="w",
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            info_frame,
+            text=subtitle,
+            font=ctk.CTkFont(size=12),
+            text_color=THEME["text_secondary"],
+            anchor="w",
+        ).pack(anchor="w", pady=(2, 0))
+
+        # Right side: status + rating + favorite
+        right_frame = ctk.CTkFrame(self, fg_color="transparent")
+        right_frame.pack(side="right", padx=15, pady=12)
+
+        status_colors = {
+            "watched": THEME["status_watched"],
+            "watching": THEME["status_watching"],
+            "want_to_watch": THEME["status_planned"],
+            "read": THEME["status_watched"],
+            "reading": THEME["status_watching"],
+            "want_to_read": THEME["status_planned"],
+            "completed": THEME["status_watched"],
+            "on_hold": THEME["text_muted"],
+            "dropped": THEME["text_muted"],
+        }
+        color = status_colors.get(status, THEME["text_muted"])
+
+        ctk.CTkLabel(
+            right_frame,
+            text=status.replace("_", " ").title(),
+            font=ctk.CTkFont(size=11),
+            fg_color=color,
+            corner_radius=6,
+            text_color=THEME["bg_primary"],
+            padx=8,
+            pady=2,
+        ).pack(anchor="e")
+
+        rating_row = ctk.CTkFrame(right_frame, fg_color="transparent")
+        rating_row.pack(anchor="e", pady=(4, 0))
+
+        if rating:
+            ctk.CTkLabel(
+                rating_row,
+                text=f"⭐ {rating}",
+                font=ctk.CTkFont(size=13, weight="bold"),
+                text_color=THEME["rating_gold"],
+            ).pack(side="left")
+            ctk.CTkLabel(
+                rating_row,
+                text="/10",
+                font=ctk.CTkFont(size=11),
+                text_color=THEME["text_muted"],
+            ).pack(side="left")
+
+        heart_text = "❤️" if is_favorite else "🤍"
+        self.favorite_btn = ctk.CTkButton(
+            right_frame,
+            text=heart_text,
+            width=30,
+            height=30,
+            corner_radius=15,
+            fg_color="transparent",
+            hover_color=THEME["bg_card_hover"],
+            command=self._toggle_favorite,
+        )
+        self.favorite_btn.pack(anchor="e", pady=(4, 0))
+
+        # Bind hover and click
+        if on_click:
+            self._bind_events_recursive(self)
+
+    def _bind_events_recursive(self, widget):
+        if widget == self.favorite_btn:
+            return
+        widget.bind("<Button-1>", self._handle_click)
+        widget.bind("<Enter>", self._on_hover_enter)
+        widget.bind("<Leave>", self._on_hover_leave)
+        widget.configure(cursor="hand2")
+        for child in widget.winfo_children():
+            self._bind_events_recursive(child)
+
+    def _toggle_favorite(self):
+        self.is_favorite = not self.is_favorite
+        self.favorite_btn.configure(text="❤️" if self.is_favorite else "🤍")
+        if self.on_favorite_toggle:
+            self.on_favorite_toggle(self.is_favorite)
+
+    def _on_hover_enter(self, event):
+        self.configure(fg_color=THEME["bg_card_hover"], border_width=1, border_color=THEME["accent_glow"])
+
+    def _on_hover_leave(self, event):
+        self.configure(fg_color=THEME["bg_card"], border_width=0)
+
+    def _handle_click(self, event):
+        if self.on_click:
+            self.on_click()
+
+    def _set_image(self, image: Optional[ctk.CTkImage]):
+        if image:
+            self.image_label.configure(image=image, text="")
+
+
 class Sidebar(ctk.CTkFrame):
     """Dark luxury sidebar navigation with crimson accents."""
 
