@@ -2199,7 +2199,7 @@ class MainContent(ctk.CTkFrame):
             card.pack(fill="x", padx=10, pady=5)
 
     def _create_card_for_item(self, parent, item, media_type: str):
-        """Create a MediaCard for an item."""
+        """Create a MediaCard or MediaListCard for an item based on current view mode."""
         if media_type == "movie":
             subtitle = f"{item.year or 'N/A'}"
             image_url = item.poster_url
@@ -2211,29 +2211,42 @@ class MainContent(ctk.CTkFrame):
         else:  # series
             subtitle = f"{item.year or 'N/A'}"
             image_url = item.poster_url
-            # Calculate progress for series
             total_watched = len(item.episodes_watched) if hasattr(item, 'episodes_watched') else 0
-            # Estimate total episodes (10 per season as rough estimate)
             estimated_total = item.total_seasons * 10 if hasattr(item, 'total_seasons') else 10
             progress = min(1.0, total_watched / estimated_total) if estimated_total > 0 else 0
 
-        card = MediaCard(
-            parent,
-            title=item.title,
-            subtitle=subtitle,
-            status=item.status.value,
-            rating=item.user_rating,
-            image_url=image_url,
-            on_click=lambda i=item, t=media_type: self.app.show_detail(i, t) if not self.selection_mode else None,
-            is_favorite=item.is_favorite,
-            on_favorite_toggle=lambda fav, i=item, t=media_type: self.app.toggle_favorite(i, t, fav),
-            selectable=self.selection_mode,
-            selected=item.id in self.selected_items,
-            on_select=self._on_item_select if self.selection_mode else None,
-            media_id=item.id,
-            progress=progress,
-        )
-        card.pack(side="left", padx=10, pady=10)
+        if self.view_mode == "list":
+            card = MediaListCard(
+                parent,
+                title=item.title,
+                subtitle=subtitle,
+                status=item.status.value,
+                rating=item.user_rating,
+                image_url=image_url,
+                on_click=lambda i=item, t=media_type: self.app.show_detail(i, t) if not self.selection_mode else None,
+                is_favorite=item.is_favorite,
+                on_favorite_toggle=lambda fav, i=item, t=media_type: self.app.toggle_favorite(i, t, fav),
+                media_id=item.id,
+            )
+            card.pack(fill="x", padx=5, pady=4)
+        else:
+            card = MediaCard(
+                parent,
+                title=item.title,
+                subtitle=subtitle,
+                status=item.status.value,
+                rating=item.user_rating,
+                image_url=image_url,
+                on_click=lambda i=item, t=media_type: self.app.show_detail(i, t) if not self.selection_mode else None,
+                is_favorite=item.is_favorite,
+                on_favorite_toggle=lambda fav, i=item, t=media_type: self.app.toggle_favorite(i, t, fav),
+                selectable=self.selection_mode,
+                selected=item.id in self.selected_items,
+                on_select=self._on_item_select if self.selection_mode else None,
+                media_id=item.id,
+                progress=progress,
+            )
+            card.pack(side="left", padx=10, pady=10)
         return card
 
     def _display_media_grid(self, items: list, media_type: str):
@@ -2281,19 +2294,24 @@ class MainContent(ctk.CTkFrame):
         else:
             items = sorted(items, key=lambda x: x.date_added or "", reverse=True)
 
-        # Calculate columns based on width
-        width = self.winfo_width()
-        card_width = 210
-        columns = max(1, (width - 60) // card_width)
+        if self.view_mode == "list":
+            # Single column list
+            list_frame = ctk.CTkFrame(self.grid_frame, fg_color="transparent")
+            list_frame.pack(fill="x", pady=5, padx=5)
+            for item in items:
+                self._create_card_for_item(list_frame, item, media_type)
+        else:
+            # Calculate columns based on width
+            width = self.winfo_width()
+            card_width = 210
+            columns = max(1, (width - 60) // card_width)
 
-        # Create grid
-        row_frame = None
-        for i, item in enumerate(items):
-            if i % columns == 0:
-                row_frame = ctk.CTkFrame(self.grid_frame, fg_color="transparent")
-                row_frame.pack(fill="x", pady=5)
-
-            self._create_card_for_item(row_frame, item, media_type)
+            row_frame = None
+            for i, item in enumerate(items):
+                if i % columns == 0:
+                    row_frame = ctk.CTkFrame(self.grid_frame, fg_color="transparent")
+                    row_frame.pack(fill="x", pady=5)
+                self._create_card_for_item(row_frame, item, media_type)
 
 
 class ExportDialog(ctk.CTkToplevel):
