@@ -409,7 +409,7 @@ class SearchResultCard(ctk.CTkFrame):
 
 
 class Sidebar(ctk.CTkFrame):
-    """Dark cinematic sidebar navigation with orange accents."""
+    """Dark luxury sidebar navigation with crimson accents."""
 
     def __init__(self, parent, on_navigate: Callable, **kwargs):
         super().__init__(parent, **kwargs)
@@ -440,6 +440,13 @@ class Sidebar(ctk.CTkFrame):
             text_color=THEME["text_primary"],
         ).pack(anchor="w")
 
+        # Crimson rule under logo
+        ctk.CTkFrame(
+            logo_frame,
+            height=2,
+            fg_color=THEME["accent_primary"],
+        ).pack(fill="x", pady=(8, 0))
+
         # Local storage indicator
         ctk.CTkLabel(
             logo_frame,
@@ -462,7 +469,7 @@ class Sidebar(ctk.CTkFrame):
             self._create_nav_button(key, icon, label)
 
     def _create_nav_button(self, key: str, icon: str, label: str):
-        """Create a navigation button with orange accent bar."""
+        """Create a navigation button with crimson accent bar."""
         # Container for accent bar + button
         container = ctk.CTkFrame(self, fg_color="transparent", height=45)
         container.pack(fill="x", pady=3)
@@ -500,7 +507,7 @@ class Sidebar(ctk.CTkFrame):
         for k, btn in self.buttons.items():
             if k == key:
                 btn.configure(
-                    fg_color=THEME["bg_card"],
+                    fg_color=THEME["accent_subtle"],
                     text_color=THEME["text_primary"],
                 )
                 self.accent_bars[k].configure(fg_color=THEME["accent_primary"])
