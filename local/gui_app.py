@@ -1022,17 +1022,30 @@ class MainContent(ctk.CTkFrame):
         self.configure(fg_color=THEME["bg_primary"])
 
         # Header
-        self.header = ctk.CTkFrame(self, fg_color="transparent", height=60)
+        self.header = ctk.CTkFrame(self, fg_color="transparent", height=70)
         self.header.pack(fill="x", padx=30, pady=(20, 10))
         self.header.pack_propagate(False)
 
+        # Title with crimson underline accent
+        title_frame = ctk.CTkFrame(self.header, fg_color="transparent")
+        title_frame.pack(side="left", anchor="w")
+
         self.title_label = ctk.CTkLabel(
-            self.header,
+            title_frame,
             text="Movies",
-            font=ctk.CTkFont(size=28, weight="bold"),
+            font=ctk.CTkFont(size=32, weight="bold"),
             text_color=THEME["text_primary"],
         )
-        self.title_label.pack(side="left", anchor="w")
+        self.title_label.pack(anchor="w")
+
+        self.title_underline = ctk.CTkFrame(
+            title_frame,
+            height=3,
+            width=44,
+            corner_radius=2,
+            fg_color=THEME["accent_primary"],
+        )
+        self.title_underline.pack(anchor="w", pady=(2, 0))
 
         # Search frame
         self.search_frame = ctk.CTkFrame(self.header, fg_color="transparent")
