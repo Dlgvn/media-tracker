@@ -422,7 +422,7 @@ class Sidebar(ctk.CTkFrame):
         self.accent_bars = {}
         self.active = None
 
-        # Logo/Title with orange accent
+        # Logo/Title with crimson accent
         logo_frame = ctk.CTkFrame(self, fg_color="transparent")
         logo_frame.pack(fill="x", padx=20, pady=(25, 30))
 
@@ -475,7 +475,7 @@ class Sidebar(ctk.CTkFrame):
         container.pack(fill="x", pady=3)
         container.pack_propagate(False)
 
-        # Orange accent bar on left (hidden by default)
+        # Crimson accent bar on left (hidden by default)
         accent_bar = ctk.CTkFrame(
             container,
             width=4,
