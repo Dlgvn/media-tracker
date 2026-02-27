@@ -200,7 +200,7 @@ class MediaCard(ctk.CTkFrame):
             width=32,
             height=32,
             corner_radius=16,
-            fg_color="#00000088",
+            fg_color="#111111",
             hover_color=THEME["bg_card_hover"],
             command=self._toggle_favorite,
         )
