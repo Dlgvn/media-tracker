@@ -190,7 +190,21 @@ class MediaCard(ctk.CTkFrame):
             corner_radius=8,
             fg_color=THEME["bg_secondary"],
         )
-        self.image_label.pack(padx=8, pady=(8, 5))
+        self.image_label.pack(padx=10, pady=(10, 6))
+
+        # Favorite button overlaid on poster (top-right corner)
+        heart_text = "❤️" if is_favorite else "🤍"
+        self.favorite_btn = ctk.CTkButton(
+            self,
+            text=heart_text,
+            width=32,
+            height=32,
+            corner_radius=16,
+            fg_color="#00000088",
+            hover_color=THEME["bg_card_hover"],
+            command=self._toggle_favorite,
+        )
+        self.favorite_btn.place(relx=1.0, rely=0, anchor="ne", x=-14, y=14)
 
         # Load image async with gradient overlay
         if image_url:
@@ -213,7 +227,7 @@ class MediaCard(ctk.CTkFrame):
         self.title_label = ctk.CTkLabel(
             self,
             text=title[:25] + "..." if len(title) > 25 else title,
-            font=ctk.CTkFont(size=14, weight="bold"),
+            font=ctk.CTkFont(size=15, weight="bold"),
             text_color=THEME["text_primary"],
             wraplength=170,
         )
@@ -262,7 +276,7 @@ class MediaCard(ctk.CTkFrame):
 
             self.rating_label = ctk.CTkLabel(
                 rating_frame,
-                text=f"★ {rating}",
+                text=f"⭐ {rating}",
                 font=ctk.CTkFont(size=13, weight="bold"),
                 text_color=THEME["rating_gold"],
             )
@@ -278,19 +292,7 @@ class MediaCard(ctk.CTkFrame):
             self.rating_label = ctk.CTkLabel(bottom_frame, text="", height=10)
             self.rating_label.pack(side="left")
 
-        # Favorite heart button
-        heart_text = "❤️" if is_favorite else "🤍"
-        self.favorite_btn = ctk.CTkButton(
-            bottom_frame,
-            text=heart_text,
-            width=30,
-            height=30,
-            corner_radius=15,
-            fg_color="transparent",
-            hover_color=THEME["bg_card_hover"],
-            command=self._toggle_favorite,
-        )
-        self.favorite_btn.pack(side="right")
+        # Favorite button moved to poster overlay (see below)
 
         # Bind click and hover to all widgets
         if on_click:
