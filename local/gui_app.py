@@ -896,8 +896,8 @@ class MediaDetailDialog(ctk.CTkToplevel):
         self.image_label = ctk.CTkLabel(
             scroll,
             text="Loading...",
-            width=220,
-            height=330,
+            width=240,
+            height=360,
             corner_radius=12,
             fg_color=THEME["bg_card"],
             text_color=THEME["text_muted"],
@@ -906,7 +906,7 @@ class MediaDetailDialog(ctk.CTkToplevel):
 
         image_url = media.poster_url if media_type == "movie" else media.cover_url
         if image_url:
-            ImageLoader.load_async(image_url, self._set_image, size=(220, 330))
+            ImageLoader.load_async(image_url, self._set_image, size=(240, 360))
 
         # Title
         ctk.CTkLabel(
@@ -932,21 +932,33 @@ class MediaDetailDialog(ctk.CTkToplevel):
 
         # Genre/Subjects
         if media_type == "movie" and media.genre:
-            ctk.CTkLabel(
-                scroll,
-                text=media.genre,
-                font=ctk.CTkFont(size=13),
-                text_color=THEME["text_muted"],
-                wraplength=450,
-            ).pack(pady=(0, 10))
+            genre_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+            genre_frame.pack(anchor="w", pady=(0, 10))
+            for g in media.genre.split(", ")[:4]:
+                ctk.CTkLabel(
+                    genre_frame,
+                    text=g.strip(),
+                    font=ctk.CTkFont(size=12),
+                    fg_color=THEME["bg_card_hover"],
+                    corner_radius=6,
+                    text_color=THEME["text_secondary"],
+                    padx=8,
+                    pady=3,
+                ).pack(side="left", padx=(0, 6))
         elif media_type == "book" and media.subjects:
-            ctk.CTkLabel(
-                scroll,
-                text=media.subjects,
-                font=ctk.CTkFont(size=13),
-                text_color=THEME["text_muted"],
-                wraplength=450,
-            ).pack(pady=(0, 10))
+            subj_frame = ctk.CTkFrame(scroll, fg_color="transparent")
+            subj_frame.pack(anchor="w", pady=(0, 10))
+            for s in media.subjects.split(", ")[:4]:
+                ctk.CTkLabel(
+                    subj_frame,
+                    text=s.strip(),
+                    font=ctk.CTkFont(size=12),
+                    fg_color=THEME["bg_card_hover"],
+                    corner_radius=6,
+                    text_color=THEME["text_secondary"],
+                    padx=8,
+                    pady=3,
+                ).pack(side="left", padx=(0, 6))
 
         # Plot (movies only)
         if media_type == "movie" and media.plot:
