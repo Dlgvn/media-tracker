@@ -504,7 +504,7 @@ class MediaListCard(ctk.CTkFrame):
         rating_row = ctk.CTkFrame(right_frame, fg_color="transparent")
         rating_row.pack(anchor="e", pady=(4, 0))
 
-        if rating:
+        if rating is not None:
             ctk.CTkLabel(
                 rating_row,
                 text=f"⭐ {rating}",
@@ -541,7 +541,10 @@ class MediaListCard(ctk.CTkFrame):
         widget.bind("<Button-1>", self._handle_click)
         widget.bind("<Enter>", self._on_hover_enter)
         widget.bind("<Leave>", self._on_hover_leave)
-        widget.configure(cursor="hand2")
+        try:
+            widget.configure(cursor="hand2")
+        except Exception:
+            pass
         for child in widget.winfo_children():
             self._bind_events_recursive(child)
 
@@ -555,7 +558,7 @@ class MediaListCard(ctk.CTkFrame):
         self.configure(fg_color=THEME["bg_card_hover"], border_width=1, border_color=THEME["accent_glow"])
 
     def _on_hover_leave(self, event):
-        self.configure(fg_color=THEME["bg_card"], border_width=0)
+        self.configure(fg_color=THEME["bg_card"], border_width=0, border_color=THEME["bg_card"])
 
     def _handle_click(self, event):
         if self.on_click:
