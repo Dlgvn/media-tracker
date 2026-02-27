@@ -1105,6 +1105,50 @@ class MainContent(ctk.CTkFrame):
         )
         self.sort_menu.pack(side="left")
 
+        # View toggle: Grid / List
+        ctk.CTkLabel(
+            self.search_frame,
+            text="View:",
+            font=ctk.CTkFont(size=12),
+            text_color=THEME["text_secondary"],
+        ).pack(side="left", padx=(15, 5))
+
+        self.view_mode = "grid"
+        self.view_toggle_frame = ctk.CTkFrame(
+            self.search_frame,
+            fg_color=THEME["bg_card"],
+            corner_radius=8,
+        )
+        self.view_toggle_frame.pack(side="left")
+
+        self.grid_btn = ctk.CTkButton(
+            self.view_toggle_frame,
+            text="\u229e",
+            width=34,
+            height=34,
+            corner_radius=7,
+            font=ctk.CTkFont(size=16),
+            fg_color=THEME["accent_primary"],
+            hover_color=THEME["accent_hover"],
+            text_color=THEME["text_primary"],
+            command=lambda: self._set_view_mode("grid"),
+        )
+        self.grid_btn.pack(side="left", padx=(2, 1), pady=2)
+
+        self.list_btn = ctk.CTkButton(
+            self.view_toggle_frame,
+            text="\u2630",
+            width=34,
+            height=34,
+            corner_radius=7,
+            font=ctk.CTkFont(size=16),
+            fg_color="transparent",
+            hover_color=THEME["bg_card_hover"],
+            text_color=THEME["text_secondary"],
+            command=lambda: self._set_view_mode("list"),
+        )
+        self.list_btn.pack(side="left", padx=(1, 2), pady=2)
+
         # Tab bar for filtering
         self.tab_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.tab_frame.pack(fill="x", padx=30, pady=(0, 10))
@@ -1358,6 +1402,18 @@ class MainContent(ctk.CTkFrame):
             "Rating (Low-High)": "rating_asc",
         }
         self.current_sort = sort_map.get(choice, "date_added")
+        self.app.refresh_content()
+
+    def _set_view_mode(self, mode: str):
+        """Switch between grid and list view."""
+        self.view_mode = mode
+        if mode == "grid":
+            self.grid_btn.configure(fg_color=THEME["accent_primary"], text_color=THEME["text_primary"])
+            self.list_btn.configure(fg_color="transparent", text_color=THEME["text_secondary"])
+        else:
+            self.list_btn.configure(fg_color=THEME["accent_primary"], text_color=THEME["text_primary"])
+            self.grid_btn.configure(fg_color="transparent", text_color=THEME["text_secondary"])
+        # Re-render current content
         self.app.refresh_content()
 
     def _on_resize(self, event):
